@@ -1,4 +1,4 @@
-import { readFileSync } from "fs";
+import { readFileSync, readdirSync } from "fs";
 import { join } from "path";
 import { parseTaskMarkdown } from "@/lib/tasks/parse-tasks";
 import { Task } from "@/lib/tasks/types";
@@ -13,6 +13,22 @@ function formatDate(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * Gets all dates that have note files in the notes/daily directory
+ */
+function getNoteDates(): Date[] {
+  const notesDir = join(process.cwd(), "notes", "daily");
+  try {
+    const files = readdirSync(notesDir);
+    return files
+      .filter((f) => f.endsWith(".md"))
+      .map((f) => new Date(f.replace(".md", "") + "T00:00:00"))
+      .filter((d) => !isNaN(d.getTime()));
+  } catch {
+    return [];
+  }
 }
 
 export default async function Home({
@@ -47,7 +63,7 @@ export default async function Home({
     <div className="min-h-screen bg-background">
       <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <DatePicker selectedDate={date} />
+          <DatePicker selectedDate={date} datesWithNotes={getNoteDates()} />
         </div>
 
         {hasError ? (

@@ -7,15 +7,21 @@ import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
-export function DatePicker({ selectedDate }: { selectedDate: Date }) {
-  const router = useRouter()
-  
+export function DatePicker({
+  selectedDate,
+  datesWithNotes = [],
+}: {
+  selectedDate: Date;
+  datesWithNotes?: Date[];
+}) {
+  const router = useRouter();
+
   const handleSelect = (date: Date | undefined) => {
     if (date) {
-      const dateStr = format(date, "yyyy-MM-dd")
-      router.push(`/?date=${dateStr}`)
+      const dateStr = format(date, "yyyy-MM-dd");
+      router.push(`/?date=${dateStr}`);
     }
-  }
+  };
 
   return (
     <Popover>
@@ -26,8 +32,13 @@ export function DatePicker({ selectedDate }: { selectedDate: Date }) {
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
-        <Calendar mode="single" selected={selectedDate} onSelect={handleSelect} />
+        <Calendar
+          mode="single"
+          selected={selectedDate}
+          onSelect={handleSelect}
+          modifiers={{ hasNote: datesWithNotes }}
+        />
       </PopoverContent>
     </Popover>
-  )
+  );
 }
