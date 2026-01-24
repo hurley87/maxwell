@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { format } from "date-fns"
 import { Calendar as CalendarIcon } from "lucide-react"
@@ -15,16 +16,18 @@ export function DatePicker({
   datesWithNotes?: Date[];
 }) {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
 
   const handleSelect = (date: Date | undefined) => {
     if (date) {
       const dateStr = format(date, "yyyy-MM-dd");
       router.push(`/?date=${dateStr}`);
+      setOpen(false);
     }
   };
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="outline" className="justify-start text-left font-normal">
           <CalendarIcon className="mr-2 h-4 w-4" />
