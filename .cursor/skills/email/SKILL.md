@@ -84,6 +84,16 @@ curl -L -s -o /dev/null -w "%{http_code}" "UNSUBSCRIBE_URL"
 
 A 200 response typically means success. Report the result to the user.
 
+4. **Mark as read** - Remove the UNREAD label from the thread:
+
+```bash
+gog gmail thread modify <threadId> --remove UNREAD --account <account> --force
+```
+
+The `threadId` is available in the triage results as `email.threadId`.
+
+5. **Log the action** (see Logging Email Actions below)
+
 ### Creating Gmail Drafts
 
 If user wants to save a suggested reply as a draft:
@@ -106,12 +116,50 @@ echo "Draft content" | gog gmail drafts create \
   --body-file -
 ```
 
+After creating a draft, **log the action** (see below).
+
+### Logging Email Actions
+
+**IMPORTANT**: After ANY email action (unsubscribe, draft created, reply sent), log it so it becomes a memory.
+
+Call the logging endpoint:
+
+```bash
+curl -X POST "http://localhost:3000/api/email/log" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "ACTION_TYPE", "from": "Sender Name", "subject": "Email Subject"}'
+```
+
+Action types:
+- `unsubscribe` - Unsubscribed from a newsletter/mailing list
+- `draft_created` - Created a draft reply in Gmail
+- `reply_sent` - Sent a reply (if using gog to send)
+- `archived` - Archived an email
+- `labeled` - Applied a label (use `details` for label name)
+
+Examples:
+
+```bash
+# Log an unsubscribe
+curl -X POST "http://localhost:3000/api/email/log" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "unsubscribe", "from": "swyx (AINews)", "subject": "Moonshot Kimi K2.5"}'
+
+# Log a draft created
+curl -X POST "http://localhost:3000/api/email/log" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "draft_created", "from": "John Smith", "subject": "Re: Q4 Budget Review"}'
+```
+
+The action is logged to today's daily notes under "## Email Actions" and will be indexed by the memory system.
+
 ### Example Workflow
 
 1. User says "check my email" or "morning email review"
 2. Call the API: `curl "http://localhost:3000/api/email/triage?hours=24"`
 3. Parse the JSON output
-4. Present findings conversationally:
+4. Present findings conversationally
+5. When user takes action (unsubscribe, create draft, etc.), perform the action AND log it
 
    "You have 23 unread emails from the last 24 hours:
 
