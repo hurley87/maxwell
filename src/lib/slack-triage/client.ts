@@ -21,7 +21,7 @@ function getSlackToken(): string {
  */
 async function slackApiRequest(
   endpoint: string,
-  params: Record<string, string | number | undefined> = {}
+  params: Record<string, string | number | boolean | undefined> = {}
 ): Promise<any> {
   const token = getSlackToken();
   const url = new URL(`${SLACK_API_BASE}/${endpoint}`);
