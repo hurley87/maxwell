@@ -1,13 +1,61 @@
 import { getDb } from './db';
 import type { Entity, Observation, SearchResult } from './types';
 
+export type SearchOptions = {
+  recency?: boolean;
+  halfLifeDays?: number;
+};
+
+/**
+ * Calculate age in days from a YYYY-MM-DD date string
+ */
+function getAgeDays(dateStr: string): number {
+  try {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    return Math.max(0, diffDays);
+  } catch {
+    // Invalid date format - treat as very old
+    return 10000;
+  }
+}
+
+/**
+ * Calculate time decay factor using half-life formula: decay = 0.5^(ageDays/halfLifeDays)
+ * Returns a value between 0 and 1, where 1 = very recent, approaching 0 for very old
+ */
+function calculateTimeDecay(ageDays: number, halfLifeDays: number): number {
+  if (ageDays <= 0) return 1.0;
+  const decay = Math.pow(0.5, ageDays / halfLifeDays);
+  // Clamp to minimum to avoid extreme adjusted ranks
+  return Math.max(0.05, Math.min(1.0, decay));
+}
+
+/**
+ * Calculate adjusted rank with recency weighting
+ * Lower rank = better match. Multiplying by decay (0-1) makes old items less negative (worse rank).
+ */
+function calculateAdjustedRank(rawRank: number, createdAt: string, halfLifeDays: number): number {
+  const ageDays = getAgeDays(createdAt);
+  const decay = calculateTimeDecay(ageDays, halfLifeDays);
+  return rawRank * decay;
+}
+
 /**
  * Full-text search across all observations
  */
-export function search(query: string, limit: number = 20): SearchResult[] {
+export function search(query: string, limit: number = 20, options: SearchOptions = {}): SearchResult[] {
   const db = getDb();
   
-  // Search FTS5 table
+  const useRecency = options.recency === true;
+  const halfLifeDays = options.halfLifeDays ?? 30;
+
+  // Search FTS5 table - fetch more candidates if using recency weighting
+  // since we'll re-rank them
+  const fetchLimit = useRecency ? Math.min(limit * 3, 100) : limit;
   const ftsResults = db.prepare(`
     SELECT m.observation_id, fts.rank
     FROM observations_fts fts
@@ -15,7 +63,7 @@ export function search(query: string, limit: number = 20): SearchResult[] {
     WHERE observations_fts MATCH ?
     ORDER BY fts.rank
     LIMIT ?
-  `).all(query, limit) as Array<{ observation_id: string; rank: number }>;
+  `).all(query, fetchLimit) as Array<{ observation_id: string; rank: number }>;
 
   // Group observations by entity
   const entityMap = new Map<string, { entity: Entity; observations: Observation[]; score: number }>();
@@ -54,19 +102,28 @@ export function search(query: string, limit: number = 20): SearchResult[] {
     };
 
     if (!entityMap.has(entity.id)) {
-      entityMap.set(entity.id, { entity, observations: [], score: 0 });
+      entityMap.set(entity.id, { entity, observations: [], score: Infinity });
     }
 
     const entry = entityMap.get(entity.id)!;
     entry.observations.push(observation);
+    
+    // Calculate score: use adjusted rank if recency weighting is enabled
+    const rank = useRecency
+      ? calculateAdjustedRank(ftsResult.rank, obs.created_at, halfLifeDays)
+      : ftsResult.rank;
+    
     // Use best (lowest) rank as score (lower rank = better match)
-    entry.score = Math.min(entry.score || Infinity, ftsResult.rank);
+    entry.score = Math.min(entry.score, rank);
   }
 
   // Convert to SearchResult array and sort by score
-  return Array.from(entityMap.values())
+  const results = Array.from(entityMap.values())
     .map(({ entity, observations, score }) => ({ entity, observations, score }))
     .sort((a, b) => a.score - b.score);
+
+  // Limit final results
+  return results.slice(0, limit);
 }
 
 /**

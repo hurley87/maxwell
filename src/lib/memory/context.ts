@@ -1,5 +1,5 @@
 import { getDb } from './db';
-import { search, findEntity, getObservations, getRecentActivity, getRelated, getPendingTasks, getActivityByDate } from './search';
+import { search, findEntity, getObservations, getRecentActivity, getRelated, getPendingTasks, getActivityByDate, type SearchOptions } from './search';
 import type { ContextResult, Entity, Observation } from './types';
 
 export type ContextQuery = {
@@ -9,6 +9,8 @@ export type ContextQuery = {
   recentDays?: number;      // Activity in last N days
   includePendingTasks?: boolean;
   limit?: number;
+  recency?: boolean;        // Enable recency-weighted ranking
+  halfLifeDays?: number;    // Half-life in days for recency decay (default: 30)
 };
 
 /**
@@ -43,7 +45,11 @@ export function buildContext(query: ContextQuery): ContextResult {
 
   // If query specified, search
   if (query.query) {
-    const searchResults = search(query.query, limit);
+    const searchOptions: SearchOptions = {
+      recency: query.recency,
+      halfLifeDays: query.halfLifeDays,
+    };
+    const searchResults = search(query.query, limit, searchOptions);
     for (const result of searchResults) {
       if (!entitySet.has(result.entity.id)) {
         entities.push(result.entity);

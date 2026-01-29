@@ -14,6 +14,8 @@ export const dynamic = 'force-dynamic';
  * - reindex: Force reindex before search (default: true)
  * - context: Build full context instead of raw search (default: false)
  * - days: For context mode, include recent days (default: 7)
+ * - recency: Enable recency-weighted ranking (default: false)
+ * - halfLifeDays: Half-life in days for recency decay, only used when recency=true (default: 30, range: 1-365)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -24,6 +26,9 @@ export async function GET(request: NextRequest) {
     const shouldReindex = searchParams.get('reindex') !== 'false';
     const useContext = searchParams.get('context') === 'true';
     const recentDays = parseInt(searchParams.get('days') || '7', 10);
+    const recency = searchParams.get('recency') === 'true';
+    const halfLifeDaysParam = searchParams.get('halfLifeDays');
+    const halfLifeDays = halfLifeDaysParam ? parseInt(halfLifeDaysParam, 10) : undefined;
 
     if (!query) {
       return NextResponse.json(
@@ -35,6 +40,13 @@ export async function GET(request: NextRequest) {
     if (isNaN(limit) || limit < 1 || limit > 100) {
       return NextResponse.json(
         { error: 'limit must be between 1 and 100' },
+        { status: 400 }
+      );
+    }
+
+    if (halfLifeDays !== undefined && (isNaN(halfLifeDays) || halfLifeDays < 1 || halfLifeDays > 365)) {
+      return NextResponse.json(
+        { error: 'halfLifeDays must be between 1 and 365' },
         { status: 400 }
       );
     }
@@ -56,6 +68,8 @@ export async function GET(request: NextRequest) {
         query,
         recentDays,
         limit,
+        recency,
+        halfLifeDays,
       });
 
       return NextResponse.json({
@@ -68,7 +82,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Raw search results
-    const results = search(query, limit);
+    const results = search(query, limit, {
+      recency,
+      halfLifeDays,
+    });
 
     return NextResponse.json({
       query,
