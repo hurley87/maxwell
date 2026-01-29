@@ -32,6 +32,40 @@ function fetchEmailContent(
   }
 }
 
+function fetchEmailsByQuery({
+  query,
+  maxEmails,
+  account,
+}: {
+  query: string;
+  maxEmails: number;
+  account?: string;
+}): Email[] {
+  const accountFlag = account ? `--account ${account}` : '';
+
+  // Step 1: Search for message IDs
+  const searchCmd = `gog gmail messages search "${query}" --max ${maxEmails} ${accountFlag} --json`;
+  const output = execSync(searchCmd, { encoding: 'utf-8' });
+  const parsed = JSON.parse(output);
+
+  // gog returns { messages: [...] } object
+  const messages = parsed.messages || [];
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return [];
+  }
+
+  // Step 2: Fetch full content for each message
+  const emails: Email[] = [];
+  for (const msg of messages) {
+    const email = fetchEmailContent(msg.id as string, accountFlag);
+    if (email) {
+      emails.push(email);
+    }
+  }
+
+  return emails;
+}
+
 /**
  * Fetches unread emails using the gog CLI.
  * First searches for message IDs, then fetches full content for each.
@@ -42,31 +76,9 @@ export async function fetchUnreadEmails(
   const { hoursBack = 24, maxEmails = 50, account } = options;
 
   const query = `in:inbox is:unread newer_than:${hoursBack}h`;
-  const accountFlag = account ? `--account ${account}` : '';
-
-  // Step 1: Search for message IDs
-  const searchCmd = `gog gmail messages search "${query}" --max ${maxEmails} ${accountFlag} --json`;
 
   try {
-    const output = execSync(searchCmd, { encoding: 'utf-8' });
-    const parsed = JSON.parse(output);
-
-    // gog returns { messages: [...] } object
-    const messages = parsed.messages || [];
-    if (!Array.isArray(messages) || messages.length === 0) {
-      return [];
-    }
-
-    // Step 2: Fetch full content for each message
-    const emails: Email[] = [];
-    for (const msg of messages) {
-      const email = fetchEmailContent(msg.id as string, accountFlag);
-      if (email) {
-        emails.push(email);
-      }
-    }
-
-    return emails;
+    return fetchEmailsByQuery({ query, maxEmails, account });
   } catch (error) {
     throw new Error(
       `Failed to fetch emails: ${error instanceof Error ? error.message : String(error)}`

@@ -55,6 +55,9 @@ For each, show:
 - Why it needs response (reasoning from classification)
 - Suggested reply (offer to save as draft)
 
+**Draft style preference**
+- Close draft replies with **"Thanks,"** (not "Best regards,").
+
 **Informational (N emails)**  
 For each, show:
 - From, Subject

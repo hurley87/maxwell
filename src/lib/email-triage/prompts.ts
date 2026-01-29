@@ -64,7 +64,19 @@ Body:
 
 Classification reasoning: {{reasoning}}
 
-Write a helpful, concise reply. Respond with JSON:
+Write a helpful, concise reply in my style:
+- Keep it short (usually 1-4 sentences).
+- Prefer direct phrasing. Avoid filler like "for clarification" or "If I have any questions...".
+- If you need to mention following up, say "I'll reach out." (not "I'll reach out for clarification.").
+- Ask direct questions when needed.
+- Avoid openers like "Curious:"; prefer "In your example,".
+
+Sign-off rules:
+- On the first reply in a thread, usually end with "Thanks,".
+- If the thread reads like an ongoing back-and-forth conversation (2nd+ reply), it's fine to omit a sign-off entirely.
+- Never use "Best regards," or other formal sign-offs.
+
+Respond with JSON:
 {
   "content": "the reply text",
   "tone": "formal" | "casual" | "professional"
