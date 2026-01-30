@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { todayLocalDate } from '@/lib/utils/date';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,8 +49,8 @@ export async function POST(request: NextRequest) {
     // Format the log entry
     const logLine = formatLogEntry({ action, from, subject, details });
     
-    // Get today's date
-    const today = new Date().toISOString().split('T')[0];
+    // Get today's date (local timezone)
+    const today = todayLocalDate();
     const notesDir = path.join(process.cwd(), 'notes', 'daily');
     const notePath = path.join(notesDir, `${today}.md`);
 

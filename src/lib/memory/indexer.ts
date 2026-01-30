@@ -86,6 +86,14 @@ function isCheckbox(content: string): { isCheckbox: boolean; completed: boolean 
 }
 
 /**
+ * Strip HTML comments and other hidden metadata from content
+ */
+function sanitizeContent(content: string): string {
+  // Remove HTML comments like <!-- ... -->
+  return content.replace(/<!--[\s\S]*?-->/g, '').trim();
+}
+
+/**
  * Parse a markdown note and extract entities, observations, and relations
  */
 export function indexNote(filePath: string): void {
@@ -139,10 +147,20 @@ export function indexNote(filePath: string): void {
     const line = lines[lineNum];
     const trimmed = line.trim();
 
-    // Check for reserved headers
+    // Check for markdown headers
     if (trimmed.startsWith('#')) {
       const headerText = trimmed.replace(/^#+\s*/, '').toLowerCase();
       reservedHeader = reservedHeaders.includes(headerText);
+      
+      // Reset entity context at any ## header (unless header itself contains wiki link)
+      // This ensures sections like ## Email Actions, ## Code Actions attach to date entity
+      const headerWikiLinks = extractWikiLinks(trimmed);
+      if (headerWikiLinks.length === 0) {
+        // No wiki link in header - reset context so content attaches to date entity
+        currentEntityId = null;
+        currentEntityName = null;
+        parentStack.length = 0;
+      }
       continue;
     }
 
@@ -155,9 +173,12 @@ export function indexNote(filePath: string): void {
 
     // Check if this is a checkbox
     const { isCheckbox: isCheck, completed } = isCheckbox(content);
-    const actualContent = isCheck ? content.replace(/^-\s+\[[ x]\]\s+/, '') : content.replace(/^-\s+/, '');
+    let actualContent = isCheck ? content.replace(/^-\s+\[[ x]\]\s+/, '') : content.replace(/^-\s+/, '');
+    
+    // Sanitize content: strip HTML comments and hidden metadata
+    actualContent = sanitizeContent(actualContent);
 
-    // Extract wiki links from this line
+    // Extract wiki links from this line (after sanitization)
     const wikiLinks = extractWikiLinks(actualContent);
     
     // Extract URLs
@@ -329,6 +350,7 @@ export function indexNote(filePath: string): void {
 
 /**
  * Index all notes in daily/ and projects/ directories
+ * Also indexes curated memory files (RESET.md, MEMORY.md, USER.md)
  * Only reindexes files that have changed (based on hash comparison)
  */
 export function indexAll(): void {
@@ -336,6 +358,7 @@ export function indexAll(): void {
   const notesDir = join(process.cwd(), 'notes');
   const dailyDir = join(notesDir, 'daily');
   const projectsDir = join(notesDir, 'projects');
+  const rootDir = process.cwd();
 
   // Get existing indexed files
   const indexedFiles = new Map<string, string>();
@@ -371,6 +394,25 @@ export function indexAll(): void {
       if (indexedFiles.get(filePath) !== hash) {
         indexNote(filePath);
       }
+    }
+  }
+
+  // Index curated memory files (RESET.md, MEMORY.md, USER.md)
+  const curatedFiles = ['RESET.md', 'MEMORY.md', 'USER.md'];
+  for (const fileName of curatedFiles) {
+    const filePath = join(rootDir, fileName);
+    try {
+      if (statSync(filePath).isFile()) {
+        const content = readFileSync(filePath, 'utf-8');
+        const hash = createHash('md5').update(content).digest('hex');
+        
+        // Only index if file is new or changed
+        if (indexedFiles.get(filePath) !== hash) {
+          indexNote(filePath);
+        }
+      }
+    } catch {
+      // File doesn't exist, skip
     }
   }
 }

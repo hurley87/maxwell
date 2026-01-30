@@ -48,11 +48,9 @@ export function formatCommitLine(args: {
 }): string {
   const time = formatTimeHHmm(args.occurredAt);
   const title = escapeQuotes(args.commit.subject);
-  const shortSha = args.commit.sha.slice(0, 7);
-  const { additions, deletions, filesChanged } = args.commit.diff;
-  const commitUrl = `https://github.com/${args.repoFullName}/commit/${args.commit.sha}`;
+  const { filesChanged } = args.commit.diff;
 
-  return `- [${time}] [[${args.project}]] commit ${shortSha} "${title}" (+${additions}/-${deletions}, ${filesChanged} files) ${commitUrl}`;
+  return `- [${time}] "${title}" (${filesChanged} files)`;
 }
 
 export function formatGitSummaryLine(args: {

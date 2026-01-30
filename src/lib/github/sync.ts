@@ -1,14 +1,12 @@
-import { initDb, getDb } from '@/lib/memory';
+import { initDb, getDb, indexNote } from '@/lib/memory';
 import type { CodeActionEvent, GitHubRepoMapping, SyncResult } from './types';
 import { loadGitHubReposConfig, DEFAULT_CONFIG_PATH } from './config';
 import { fetchPrActivityForDate } from './gh';
 import { collectCommitsWithStats } from './git';
 import { appendCodeActionsToDailyNote } from './notes';
 import { formatCommitLine, formatGitSummaryLine, formatPrLine, sortEventsByOccurredAt } from './format';
-
-function todayLocalDate(): string {
-  return new Date().toISOString().split('T')[0];
-}
+import { todayLocalDate } from '@/lib/utils/date';
+import { join } from 'path';
 
 function stablePrId(kind: 'pr_opened' | 'pr_merged', repoFullName: string, number: number): string {
   return `${kind}:${repoFullName}#${number}`;
@@ -190,6 +188,17 @@ export async function syncGitHubCodeActions(args?: {
   // Append only newly-added events to the daily note
   const linesToAppend = added.map((e) => `${e.line} <!-- ${e.id} -->`);
   await appendCodeActionsToDailyNote({ date, lines: linesToAppend });
+
+  // Reindex the updated daily note so memory is immediately queryable
+  if (added.length > 0) {
+    const notesDir = join(process.cwd(), 'notes', 'daily');
+    const notePath = join(notesDir, `${date}.md`);
+    try {
+      indexNote(notePath);
+    } catch (error) {
+      warnings.push(`Failed to reindex daily note: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
 
   return {
     date,
