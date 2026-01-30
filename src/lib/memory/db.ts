@@ -52,6 +52,20 @@ export function initDb() {
       hash TEXT NOT NULL,
       indexed_at TEXT NOT NULL
     );
+
+    -- Local integrations (GitHub, etc) with stable event IDs for dedupe
+    CREATE TABLE IF NOT EXISTS integration_events (
+      id TEXT PRIMARY KEY,
+      date TEXT NOT NULL,              -- YYYY-MM-DD bucket
+      occurred_at TEXT NOT NULL,       -- ISO timestamp
+      project TEXT NOT NULL,
+      repo TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      line TEXT NOT NULL,              -- rendered markdown line
+      payload_json TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS integration_events_date_idx ON integration_events(date);
   `);
   
   // FTS5 for full-text search

@@ -8,6 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "github:sync": "tsx scripts/github-sync.ts",
+    "github:selftest": "tsx scripts/github-sync-selftest.ts",
     "memory:test": "tsx scripts/test-memory.ts",
     "memory:index": "tsx -e \"import { initDb, indexAll, getStats } from './src/lib/memory/index.js'; initDb(); indexAll(); console.log(getStats());\"",
     "memory:search": "tsx -e \"import { search } from './src/lib/memory/index.js'; console.log(JSON.stringify(search(process.argv[2] || ''), null, 2));\"",

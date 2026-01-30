@@ -44,3 +44,6 @@ next-env.d.ts
 # memory system
 notes/maxwell.db
 
+# local github integration (machine-specific paths/tokens)
+notes/github-repos.json
+
