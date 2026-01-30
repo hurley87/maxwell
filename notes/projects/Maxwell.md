@@ -8,8 +8,6 @@
             - beads
                 - https://steve-yegge.medium.com/introducing-beads-a-coding-agent-memory-system-637d7d92514a
                 - https://github.com/tobi/qmd
-        - write narrative around building it
-            - https://x.com/milesdeutscher/article/2014049206168854726
         - skills
             - https://github.com/clawdbot/clawdbot
             - https://github.com/clawdbot/clawdbot/tree/main/skills
