@@ -58,3 +58,47 @@ See `notes/README.md` for complete specification. Key points:
 - Checkboxes (`- [ ]`) for commitments/tasks
 - Bullets (`-`) for reviews/links under reserved headers
 - Reserved headers (case-insensitive): review, links, reading, reference, watch, listen
+
+## Skills
+
+Skills are located in `.claude/skills/`. Each skill has a markdown file with usage instructions.
+
+### gog (Google Workspace)
+CLI for Gmail, Calendar, Sheets, and Docs. Use for sending emails, managing calendar events, reading/writing spreadsheets.
+- See `.claude/skills/gog.md` for commands
+
+### memory
+Search and retrieve context from indexed notes. Call `initDb()` and `indexAll()` at start of interactions.
+- `search(query)` - Full-text search across notes
+- `buildContext({ entity?, date?, query? })` - Build relevant context
+- `getPendingTasks()` - Get incomplete tasks
+- See `.claude/skills/memory.md` for full API
+
+### imsg (iMessage)
+Triage iMessage/SMS messages via API endpoint.
+- Triage: `curl "http://localhost:3000/api/imsg/triage?hours=8"`
+- Send: `POST /api/imsg/send` with `{to, text, service}`
+- Log actions: `POST /api/imsg/log` with `{action, contact, summary}`
+- See `.claude/skills/imsg.md` for details
+
+### email
+Triage unread emails via API endpoint.
+- Triage: `curl "http://localhost:3000/api/email/triage?hours=24"`
+- Log actions: `POST /api/email/log` with `{action, from, subject}`
+- Use `gog gmail drafts create` to save draft replies
+- See `.claude/skills/email.md` for details
+
+### slack
+Triage Slack messages via API endpoint.
+- Triage: `curl "http://localhost:3000/api/slack/triage?hours=8"`
+- Send: `POST /api/slack/messages` with `{channel, text, threadTs?}`
+- React: `POST /api/slack/react` with `{channel, timestamp, emoji}`
+- Log actions: `POST /api/slack/log` with `{action, channel, user, text}`
+- See `.claude/skills/slack.md` for details
+
+### github
+Sync GitHub PR activity and local commits into daily notes.
+- Run: `pnpm github:sync`
+- Specific date: `pnpm github:sync -- --date 2026-01-30`
+- Configure repos in `notes/github-repos.json`
+- See `.claude/skills/github.md` for details
